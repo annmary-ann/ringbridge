@@ -1,0 +1,34 @@
+[project]
+name = "ringbridge-sim"
+version = "0.0.0"
+description = "Simulated-caller scenario runner and evals for Ringbridge agents."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Annmary Vinod" }]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "ringbridge-core",
+    "ringbridge-agent",
+]
+
+[project.urls]
+Homepage = "https://github.com/annmary-ann/ringbridge"
+Issues = "https://github.com/annmary-ann/ringbridge/issues"
+
+[tool.uv.sources]
+ringbridge-core = { workspace = true }
+ringbridge-agent = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ringbridge_sim"]

@@ -21,7 +21,20 @@ Changing an architectural boundary? Add or update an ADR in the same PR.
 
 ## Development setup
 
-Coming with M0 (#2–#4): `uv sync`, `docker compose up`, `uv run poe check`.
+Requirements: [uv](https://docs.astral.sh/uv/) and Docker. uv installs Python 3.12 for you.
+
+```sh
+uv sync                 # create .venv with every workspace package (editable) + dev tools
+uv run poe check        # lint, strict type check, tests: the same as CI
+uv run poe hooks        # optional: install pre-commit hooks
+uv run ringbridge --version
+```
+
+Layout: one uv workspace, one package per folder in `packages/` (`ringbridge-core`, `-agent`, `-server`, `-connectors`, `-sim`, `-cli`), each with `src/` and `tests/`. See [ADR-0004](docs/adr/0004-python-uv-monorepo.md).
+
+**Windows with Smart App Control:** it can block the `.exe` shims uv creates (`poe.exe`, `mypy`). Run tasks as `uv run python -m poethepoet <task>`, and type-check in Linux with `uv run python -m poethepoet typecheck-docker`.
+
+The local Docker stack (LiveKit, Postgres, ...) arrives with #4.
 
 ## Conduct
 
