@@ -73,7 +73,7 @@ Phone ─SIP─► LiveKit SIP ─► Agent workers (STT → LLM → TTS, graph 
 | M4 Platform **v0.3** | Mar 2027 | Multi-tenant API, dashboard, voice-mode simulation |
 | M5 **v1.0** | Apr 2027 | Helm, security review, docs site, published benchmarks |
 
-Progress is tracked on the [project board](https://github.com/users/annmary-ann/projects).
+Progress is tracked on the [project board](https://github.com/users/annmary-ann/projects/8).
 
 ## Contributing
 
