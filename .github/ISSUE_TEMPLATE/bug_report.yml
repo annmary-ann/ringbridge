@@ -1,0 +1,25 @@
+name: Bug report
+description: Something does not work as documented
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Agent spec snippet, call direction, providers used. Remove phone numbers and personal data.
+  - type: input
+    id: version
+    attributes:
+      label: Ringbridge version
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or trace IDs
+      render: text
