@@ -1,0 +1,20 @@
+name: Feature or connector request
+description: Suggest a capability, provider or connector
+labels: ["type: feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and for what kind of business?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [voice / telephony, agent spec, connectors, outbound campaigns, simulation / evals, dashboard, languages, other]
