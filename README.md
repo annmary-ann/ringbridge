@@ -1,5 +1,8 @@
 # Ringbridge
 
+[![CI](https://github.com/annmary-ann/ringbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/annmary-ann/ringbridge/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Open-source voice agents that run real business phone calls.**
 
 Ringbridge answers your calls and makes them for you. It qualifies callers, books appointments, calls leads, leaves voicemails, updates your CRM, sends the follow-up text, and hands off to a person when it should. It is self-hosted, works with any STT, LLM, TTS and SIP provider, and supports global English and Indian languages.
