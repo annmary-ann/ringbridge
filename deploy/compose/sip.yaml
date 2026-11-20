@@ -1,0 +1,13 @@
+# LiveKit SIP bridge config for local development only.
+# Real phone calls also need the SIP port (5060) and RTP range (10000-10100/udp) reachable
+# from your SIP trunk provider. See docs/dev-stack.md.
+api_key: devkey
+api_secret: devsecret-devsecret-devsecret-devsecret
+ws_url: ws://livekit:7880
+redis:
+  address: redis:6379
+sip_port: 5060
+rtp_port: 10000-10100
+use_external_ip: false
+logging:
+  level: info

@@ -1,0 +1,11 @@
+{
+  "identities": [
+    {
+      "name": "ringbridge-dev",
+      "credentials": [
+        { "accessKey": "ringbridge", "secretKey": "ringbridge-dev-only" }
+      ],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}
