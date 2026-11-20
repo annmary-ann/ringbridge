@@ -16,5 +16,6 @@
 | [0012](0012-observability-otel.md) | OpenTelemetry traces and metrics | Accepted |
 | [0013](0013-compliance-as-features.md) | Compliance mechanisms are product features | Accepted |
 | [0014](0014-multilingual-first-class.md) | Multilingual from the start | Accepted |
+| [0015](0015-object-storage-seaweedfs.md) | S3-compatible object storage; SeaweedFS in the dev stack | Accepted |
 
 New ADR: copy [`0000-template.md`](0000-template.md), take the next number, open a PR.

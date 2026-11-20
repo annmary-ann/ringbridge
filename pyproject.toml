@@ -45,6 +45,12 @@ typecheck-docker = { cmd = "docker run --rm -v ${POE_ROOT}:/src -w /src -e UV_PR
 test = { cmd = "python -m pytest", help = "Run all package tests with coverage" }
 check = { sequence = ["lint", "typecheck", "test"], help = "Everything CI runs" }
 hooks = { cmd = "pre-commit install", help = "Install git hooks" }
+up = { cmd = "docker compose up -d --wait", help = "Start the dev stack (LiveKit, Redis, Postgres, S3, Jaeger)" }
+up-sip = { cmd = "docker compose --profile sip up -d --wait", help = "Start the dev stack with the LiveKit SIP bridge" }
+down = { cmd = "docker compose --profile sip down", help = "Stop the dev stack (data is kept)" }
+reset = { cmd = "docker compose --profile sip down -v", help = "Stop the dev stack and delete its data" }
+logs = { cmd = "docker compose logs -f --tail 100", help = "Follow dev stack logs" }
+smoke = { cmd = "bash scripts/smoke-stack.sh", help = "Check every dev stack service works" }
 
 # ---------- ruff ----------
 [tool.ruff]
