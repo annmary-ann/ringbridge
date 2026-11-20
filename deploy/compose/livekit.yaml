@@ -1,0 +1,15 @@
+# LiveKit server config for local development only. Never reuse these keys.
+port: 7880
+bind_addresses: ["0.0.0.0"]
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: false
+  # Media ports are published on the host, so clients on this machine reach them via localhost.
+  node_ip: 127.0.0.1
+redis:
+  address: redis:6379
+keys:
+  devkey: devsecret-devsecret-devsecret-devsecret
+logging:
+  level: info

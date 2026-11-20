@@ -34,7 +34,7 @@ Layout: one uv workspace, one package per folder in `packages/` (`ringbridge-cor
 
 **Windows with Smart App Control:** it can block the `.exe` shims uv creates (`poe.exe`, `mypy`). Run tasks as `uv run python -m poethepoet <task>`, and type-check in Linux with `uv run python -m poethepoet typecheck-docker`.
 
-The local Docker stack (LiveKit, Postgres, ...) arrives with #4.
+Start the local Docker stack (LiveKit, Redis, Postgres, S3, Jaeger) with `uv run poe up` and check it with `uv run poe smoke`. Details and ports: [docs/dev-stack.md](docs/dev-stack.md).
 
 ## Conduct
 

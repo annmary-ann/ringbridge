@@ -1,0 +1,97 @@
+# Ringbridge local development stack.
+#
+#   uv run poe up        # core stack: LiveKit, Redis, Postgres, S3 (SeaweedFS), Jaeger
+#   uv run poe up-sip    # core stack + LiveKit SIP (needs reachable SIP/RTP ports for real calls)
+#
+# Host ports avoid other local stacks (5432, 5433, 5434, 16686-16687, 4317-4320) and can be
+# overridden in .env. Every credential here is a development-only value.
+
+name: ringbridge
+
+services:
+  redis:
+    image: redis:8.6-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${RINGBRIDGE_REDIS_PORT:-6385}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./deploy/compose/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "${RINGBRIDGE_LIVEKIT_PORT:-7880}:7880"      # HTTP + WebSocket signalling
+      - "${RINGBRIDGE_LIVEKIT_TCP_PORT:-7881}:7881"  # WebRTC over TCP
+      - "${RINGBRIDGE_LIVEKIT_UDP_PORT:-7882}:7882/udp" # WebRTC over UDP (single muxed port)
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7880 || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  sip:
+    image: livekit/sip:v1.25.0
+    profiles: ["sip"]
+    command: ["--config", "/etc/sip.yaml"]
+    volumes:
+      - ./deploy/compose/sip.yaml:/etc/sip.yaml:ro
+    ports:
+      - "${RINGBRIDGE_SIP_PORT:-5060}:5060/udp"
+      - "${RINGBRIDGE_SIP_PORT:-5060}:5060/tcp"
+      - "10000-10100:10000-10100/udp" # RTP media
+    depends_on:
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ringbridge
+      POSTGRES_PASSWORD: ringbridge
+      POSTGRES_DB: ringbridge
+    ports:
+      - "${RINGBRIDGE_DB_PORT:-5435}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ringbridge -d ringbridge"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  s3:
+    # S3-compatible object storage for call recordings (ADR-0015).
+    image: chrislusf/seaweedfs:4.54
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
+    volumes:
+      - ./deploy/compose/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+      - s3-data:/data
+    ports:
+      - "${RINGBRIDGE_S3_PORT:-8333}:8333"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8333/status || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    ports:
+      - "${RINGBRIDGE_JAEGER_UI_PORT:-16688}:16686" # UI
+      - "${RINGBRIDGE_OTLP_GRPC_PORT:-4321}:4317"   # OTLP gRPC
+      - "${RINGBRIDGE_OTLP_HTTP_PORT:-4322}:4318"   # OTLP HTTP
+
+volumes:
+  postgres-data:
+  s3-data:

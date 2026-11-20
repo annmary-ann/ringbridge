@@ -54,6 +54,22 @@ jobs:
         if: always() && matrix.python == '3.12'
         run: uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
+  stack:
+    name: Dev stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the stack with the SIP profile
+        run: docker compose --profile sip up -d --wait --wait-timeout 180
+      - name: Smoke test every service
+        run: bash scripts/smoke-stack.sh --sip
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --profile sip logs --tail 200
+      - name: Stop
+        if: always()
+        run: docker compose --profile sip down -v
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest

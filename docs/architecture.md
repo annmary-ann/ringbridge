@@ -58,7 +58,7 @@ Ringbridge is the **business layer** on top of an open real-time voice stack. Ho
                                      │ follow-ups · retries              │
                                      └──────┬──────────────────┬─────────┘
                                             ▼                  ▼
-                                 Postgres 16 + S3 (MinIO)   Connectors
+                                 Postgres 16 + S3 storage   Connectors
                                  state, transcripts,        Calendar · CRM ·
                                  recordings                 SMS/WhatsApp/email
                                                             HTTP tools · MCP
@@ -343,7 +343,7 @@ Ringbridge provides the mechanisms, and each deployer is responsible for their o
 
 ## 12. Deployment
 
-- **Dev / single-node:** `docker compose up` brings up livekit-server, livekit-sip, redis (required by LiveKit SIP), postgres, minio, ringbridge-server (API + workflow workers), ringbridge-agent, and jaeger.
+- **Dev / single-node:** `docker compose up` brings up livekit-server, livekit-sip, redis (required by LiveKit SIP), postgres, an S3-compatible store (SeaweedFS, [ADR-0015](adr/0015-object-storage-seaweedfs.md)), ringbridge-server (API + workflow workers), ringbridge-agent, and jaeger.
 - **Production:** Helm chart (v1.0). Agent workers scale on active-call count; API and workflow workers scale independently. LiveKit can be self-hosted or LiveKit Cloud.
 - **Config:** 12-factor env vars; provider keys per project in encrypted connector installs, or env for single-tenant setups.
 
