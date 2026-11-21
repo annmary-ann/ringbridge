@@ -100,7 +100,7 @@ FastAPI + SQLAlchemy 2 + Alembic on Postgres 16.
 
 ### 3.4 Durable workflows
 
-Anything that must survive a crash or retry runs as a durable workflow backed by Postgres ([ADR-0006](adr/0006-durable-workflows-on-postgres.md)):
+Anything that must survive a crash or retry runs as a durable workflow on **DBOS Transact**, backed by Postgres ([ADR-0006](adr/0006-durable-workflows-on-postgres.md), [spike](spikes/workflow-engine.md)). Campaign calls use a DBOS queue partitioned by SIP trunk, which enforces per-trunk concurrency:
 
 | Workflow | Trigger | Steps |
 |---|---|---|
@@ -382,7 +382,5 @@ Tracked in the GitHub Project linked from the README.
 
 ## 15. Open questions
 
-- Durable workflow engine: DBOS vs Procrastinate vs a thin custom engine (spike in M0, [ADR-0006](adr/0006-durable-workflows-on-postgres.md)).
 - AMD approach (spike in M3).
 - Indian telephony: which providers allow SIP origination and termination for AI calls under current TRAI rules, and how numbers get provisioned (research in M3).
-- Licence of the dashboard (Apache-2.0 like the rest is the default).

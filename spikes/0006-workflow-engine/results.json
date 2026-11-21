@@ -1,0 +1,65 @@
+{
+  "dbos": {
+    "crash": {
+      "completed": true,
+      "recovery_s": 4.2,
+      "runs": {
+        "extract": 1,
+        "outbox": 2,
+        "notify": 1
+      }
+    },
+    "concurrency": {
+      "all_done": true,
+      "max_parallel_trunk-A": 2,
+      "max_parallel_trunk-B": 2,
+      "wall_s": 6.0
+    },
+    "delay": {
+      "requested_s": 3.0,
+      "actual_s": 4.38
+    }
+  },
+  "procrastinate": {
+    "crash": {
+      "completed": true,
+      "recovery_s": 6.8,
+      "runs": {
+        "extract": 1,
+        "outbox": 2,
+        "notify": 1
+      }
+    },
+    "concurrency": {
+      "all_done": true,
+      "max_parallel_trunk-A": 1,
+      "max_parallel_trunk-B": 1,
+      "wall_s": 10.8
+    },
+    "delay": {
+      "requested_s": 3.0,
+      "actual_s": 4.65
+    }
+  },
+  "custom": {
+    "crash": {
+      "completed": true,
+      "recovery_s": 4.3,
+      "runs": {
+        "extract": 1,
+        "outbox": 2,
+        "notify": 1
+      }
+    },
+    "concurrency": {
+      "all_done": true,
+      "max_parallel_trunk-A": 2,
+      "max_parallel_trunk-B": 2,
+      "wall_s": 5.9
+    },
+    "delay": {
+      "requested_s": 3.0,
+      "actual_s": 3.15
+    }
+  }
+}

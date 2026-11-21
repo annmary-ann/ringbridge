@@ -7,7 +7,7 @@
 | [0003](0003-cascaded-pipeline-default.md) | Cascaded STT → LLM → TTS by default; speech-to-speech optional | Accepted |
 | [0004](0004-python-uv-monorepo.md) | Python monorepo with a uv workspace; FastAPI control plane | Accepted |
 | [0005](0005-declarative-agent-spec.md) | Declarative, versioned AgentSpec: state graph + LLM nodes | Accepted |
-| [0006](0006-durable-workflows-on-postgres.md) | Durable workflows on Postgres | Proposed |
+| [0006](0006-durable-workflows-on-postgres.md) | Durable workflows on Postgres with DBOS Transact | Accepted |
 | [0007](0007-connector-sdk-and-tools.md) | Connector SDK via entry points; HTTP and MCP tools | Accepted |
 | [0008](0008-telephony-byo-sip-trunk.md) | Bring-your-own SIP trunk | Accepted |
 | [0009](0009-multi-tenancy-rls.md) | Multi-tenancy with Postgres row-level security | Accepted |
