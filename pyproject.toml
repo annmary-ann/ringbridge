@@ -20,6 +20,7 @@ dev = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.8",
+    "types-pyyaml>=6.0",
 ]
 
 [tool.uv]
@@ -51,6 +52,7 @@ down = { cmd = "docker compose --profile sip down", help = "Stop the dev stack (
 reset = { cmd = "docker compose --profile sip down -v", help = "Stop the dev stack and delete its data" }
 logs = { cmd = "docker compose logs -f --tail 100", help = "Follow dev stack logs" }
 smoke = { cmd = "bash scripts/smoke-stack.sh", help = "Check every dev stack service works" }
+schema = { cmd = "python -m ringbridge_core.spec docs/schema/agent-v1alpha1.json", help = "Regenerate the AgentSpec JSON Schema from the models" }
 
 # ---------- ruff ----------
 [tool.ruff]

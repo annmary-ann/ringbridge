@@ -48,7 +48,7 @@ graph:
         - confirm_before: calendar.book   # never books without a spoken "yes"
 ```
 
-Full example in [docs/architecture.md §4](docs/architecture.md#4-agent-model-agentspec).
+Full example: [examples/dental-clinic/agent.yaml](examples/dental-clinic/agent.yaml). Reference: [docs/agent-spec.md](docs/agent-spec.md).
 
 ## Architecture
 

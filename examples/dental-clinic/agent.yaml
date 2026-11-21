@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=../../docs/schema/agent-v1alpha1.json
+# Smile Dental: an inbound receptionist that books, reschedules and hands off to the front desk.
+# Fictional business. Phone numbers use the reserved 555-01XX range.
+apiVersion: ringbridge.dev/v1alpha1
+kind: Agent
+metadata:
+  name: smile-dental-receptionist
+  description: Front desk for a dental clinic in Kochi; English and Hindi.
+
+spec:
+  language:
+    default: en-IN
+    allowed: [hi-IN]
+    detect: true
+
+  voice:
+    stt: { provider: deepgram, model: nova-3 }
+    llm: { provider: openai, model: gpt-4.1-mini, temperature: 0.3 }
+    tts: { provider: cartesia, voice: "asha-en-in" }
+    overrides:
+      hi-IN:
+        stt: { provider: sarvam }
+        tts: { provider: sarvam, voice: "asha-hi" }
+
+  persona: |
+    You are Asha, the front desk assistant at Smile Dental in Kochi.
+    Be warm and brief: never more than two sentences at a time.
+    You can book, move or cancel appointments and answer questions from the clinic's FAQ.
+    Never give medical advice. For pain with swelling or bleeding that won't stop,
+    treat it as urgent and offer to connect the caller to the clinic.
+
+  disclosures:
+    greeting: >-
+      Hi, this is Asha, Smile Dental's AI assistant. This call is recorded
+      so we can serve you better. How can I help?
+
+  business:
+    timezone: Asia/Kolkata
+    hours:
+      mon-sat: "09:00-19:00"
+      sun: closed
+    knowledge: [./kb/services.md, ./kb/faq.md]
+
+  graph:
+    start: triage
+    nodes:
+      triage:
+        goal: Find out why they are calling and look them up if they are an existing patient.
+        tools: [crm.lookup_contact]
+        transitions:
+          - { to: booking, when: caller wants a new appointment }
+          - { to: reschedule, when: caller wants to move or cancel an appointment }
+          - { to: handoff, when: caller asks for a person or describes an emergency }
+          - { to: wrap_up, when: caller only had a question and it is answered }
+
+      booking:
+        goal: Collect the details and book a slot that suits them.
+        collect:
+          name: { type: string }
+          reason: { type: enum, values: [cleaning, pain, checkup, braces, other] }
+          preferred_time: { type: datetime_window, description: When they would like to come in. }
+          phone: { type: phone, required: false, description: Only if caller ID is hidden. }
+        tools: [calendar.availability, calendar.book]
+        guardrails:
+          - confirm_before: calendar.book
+        transitions:
+          - { to: wrap_up, when: the appointment is booked }
+          - { to: handoff, when: no suitable slot and the caller wants to speak to someone }
+        max_turns: 16
+
+      reschedule:
+        goal: Find their appointment and move or cancel it.
+        collect:
+          name: { type: string }
+          new_time: { type: datetime_window, required: false }
+        tools: [calendar.availability, calendar.reschedule, calendar.cancel]
+        guardrails:
+          - confirm_before: calendar.reschedule
+          - confirm_before: calendar.cancel
+        transitions:
+          - { to: wrap_up, when: the appointment is moved or cancelled }
+          - { to: handoff, when: the appointment cannot be found }
+
+      handoff:
+        action: transfer
+        transfer:
+          mode: warm
+          to: "+15555550100"
+          brief: true
+          fallback: take_message
+
+      wrap_up:
+        goal: Confirm what happens next and end the call politely.
+        tools: [call.end]
+
+  post_call:
+    extract:
+      outcome:
+        type: enum
+        values: [booked, rescheduled, cancelled, info_only, handoff, no_answer, voicemail]
+      lead_status: { type: enum, values: [new, qualified, unqualified, customer] }
+      summary: { type: string, max_words: 80 }
+      urgent: { type: boolean, description: "Pain, swelling or bleeding was mentioned." }
+    follow_ups:
+      - when: outcome == 'booked'
+        send: { channel: whatsapp, template: booking-confirmation, fallback: sms }
+      - when: outcome == 'rescheduled'
+        send: { channel: sms, template: booking-updated }
+      - when: outcome == 'no_answer' and attempt < 3
+        schedule_call: { after: 2h, within_window: true }

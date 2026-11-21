@@ -1,0 +1,851 @@
+{
+  "$defs": {
+    "AgentBody": {
+      "additionalProperties": false,
+      "properties": {
+        "business": {
+          "$ref": "#/$defs/Business"
+        },
+        "disclosures": {
+          "$ref": "#/$defs/Disclosures"
+        },
+        "graph": {
+          "$ref": "#/$defs/Graph"
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageConfig"
+        },
+        "persona": {
+          "minLength": 1,
+          "title": "Persona",
+          "type": "string"
+        },
+        "post_call": {
+          "$ref": "#/$defs/PostCall"
+        },
+        "voice": {
+          "$ref": "#/$defs/VoiceConfig"
+        }
+      },
+      "required": [
+        "language",
+        "voice",
+        "persona",
+        "business",
+        "graph"
+      ],
+      "title": "AgentBody",
+      "type": "object"
+    },
+    "Business": {
+      "additionalProperties": false,
+      "properties": {
+        "hours": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Day or day range to \"HH:MM-HH:MM\" or \"closed\".",
+          "title": "Hours",
+          "type": "object"
+        },
+        "knowledge": {
+          "description": "Knowledge files.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Knowledge",
+          "type": "array"
+        },
+        "timezone": {
+          "description": "IANA time zone, e.g. Asia/Kolkata.",
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timezone"
+      ],
+      "title": "Business",
+      "type": "object"
+    },
+    "ConfirmBefore": {
+      "additionalProperties": false,
+      "properties": {
+        "confirm_before": {
+          "description": "Read back and require an explicit yes first.",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+          "title": "Confirm Before",
+          "type": "string"
+        }
+      },
+      "required": [
+        "confirm_before"
+      ],
+      "title": "ConfirmBefore",
+      "type": "object"
+    },
+    "Disclosures": {
+      "additionalProperties": false,
+      "properties": {
+        "greeting": {
+          "default": "",
+          "description": "Spoken first. Must say it is an AI and if recorded.",
+          "title": "Greeting",
+          "type": "string"
+        },
+        "unsafe_disable_disclosure": {
+          "default": false,
+          "description": "Skip the disclosure check. You are responsible for legal compliance.",
+          "title": "Unsafe Disable Disclosure",
+          "type": "boolean"
+        }
+      },
+      "title": "Disclosures",
+      "type": "object"
+    },
+    "FollowUp": {
+      "additionalProperties": false,
+      "properties": {
+        "schedule_call": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScheduleCall"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "send": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SendAction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "when": {
+          "description": "Expression over outcome fields, e.g. outcome == 'booked'.",
+          "minLength": 1,
+          "title": "When",
+          "type": "string"
+        }
+      },
+      "required": [
+        "when"
+      ],
+      "title": "FollowUp",
+      "type": "object"
+    },
+    "Graph": {
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,63}$": {
+              "$ref": "#/$defs/Node"
+            }
+          },
+          "title": "Nodes",
+          "type": "object"
+        },
+        "start": {
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "nodes"
+      ],
+      "title": "Graph",
+      "type": "object"
+    },
+    "LLMRef": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "options": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Options",
+          "type": "object"
+        },
+        "provider": {
+          "description": "Provider id, e.g. deepgram, cartesia, sarvam.",
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "temperature": {
+          "default": 0.3,
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "voice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "TTS voice id.",
+          "title": "Voice"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "LLMRef",
+      "type": "object"
+    },
+    "LanguageConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed": {
+          "description": "Other locales it may switch to.",
+          "items": {
+            "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+            "type": "string"
+          },
+          "title": "Allowed",
+          "type": "array"
+        },
+        "default": {
+          "description": "BCP 47 locale the agent starts in, e.g. en-IN.",
+          "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+          "title": "Default",
+          "type": "string"
+        },
+        "detect": {
+          "default": false,
+          "description": "Detect the caller's language and switch if allowed.",
+          "title": "Detect",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "default"
+      ],
+      "title": "LanguageConfig",
+      "type": "object"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "name": {
+          "description": "Lowercase identifier, e.g. smile-dental-receptionist.",
+          "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Metadata",
+      "type": "object"
+    },
+    "Node": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "const": "transfer",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A built-in action instead of a goal.",
+          "title": "Action"
+        },
+        "collect": {
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,63}$": {
+              "$ref": "#/$defs/SlotSpec"
+            }
+          },
+          "title": "Collect",
+          "type": "object"
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goal"
+        },
+        "guardrails": {
+          "items": {
+            "$ref": "#/$defs/ConfirmBefore"
+          },
+          "title": "Guardrails",
+          "type": "array"
+        },
+        "max_turns": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Turns"
+        },
+        "silence_timeout_s": {
+          "anyOf": [
+            {
+              "maximum": 60,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Silence Timeout S"
+        },
+        "tools": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "transfer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransferConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/Transition"
+          },
+          "title": "Transitions",
+          "type": "array"
+        }
+      },
+      "title": "Node",
+      "type": "object"
+    },
+    "OutcomeField": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "max_words": {
+          "anyOf": [
+            {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Words"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "enum",
+            "number",
+            "boolean"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "OutcomeField",
+      "type": "object"
+    },
+    "PostCall": {
+      "additionalProperties": false,
+      "properties": {
+        "extract": {
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,63}$": {
+              "$ref": "#/$defs/OutcomeField"
+            }
+          },
+          "title": "Extract",
+          "type": "object"
+        },
+        "follow_ups": {
+          "items": {
+            "$ref": "#/$defs/FollowUp"
+          },
+          "title": "Follow Ups",
+          "type": "array"
+        }
+      },
+      "title": "PostCall",
+      "type": "object"
+    },
+    "ProviderRef": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "options": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Options",
+          "type": "object"
+        },
+        "provider": {
+          "description": "Provider id, e.g. deepgram, cartesia, sarvam.",
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "voice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "TTS voice id.",
+          "title": "Voice"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "ProviderRef",
+      "type": "object"
+    },
+    "ScheduleCall": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "Delay like 30m, 2h, 1d.",
+          "pattern": "^[1-9][0-9]*(m|h|d)$",
+          "title": "After",
+          "type": "string"
+        },
+        "within_window": {
+          "default": true,
+          "description": "Only inside the campaign's calling window.",
+          "title": "Within Window",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "after"
+      ],
+      "title": "ScheduleCall",
+      "type": "object"
+    },
+    "SendAction": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "enum": [
+            "sms",
+            "whatsapp",
+            "email"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "enum": [
+                "sms",
+                "whatsapp",
+                "email"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback"
+        },
+        "template": {
+          "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+          "title": "Template",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "template"
+      ],
+      "title": "SendAction",
+      "type": "object"
+    },
+    "SlotSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "enum",
+            "number",
+            "boolean",
+            "date",
+            "time",
+            "datetime_window",
+            "phone",
+            "email"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Allowed values; enum slots only.",
+          "title": "Values"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "SlotSpec",
+      "type": "object"
+    },
+    "TransferConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Warm only: speak a short brief to the human first.",
+          "title": "Brief",
+          "type": "boolean"
+        },
+        "fallback": {
+          "default": "take_message",
+          "enum": [
+            "take_message",
+            "end_call"
+          ],
+          "title": "Fallback",
+          "type": "string"
+        },
+        "mode": {
+          "default": "warm",
+          "enum": [
+            "warm",
+            "cold"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "ring_timeout_s": {
+          "default": 25,
+          "maximum": 120,
+          "minimum": 5,
+          "title": "Ring Timeout S",
+          "type": "integer"
+        },
+        "to": {
+          "pattern": "^\\+[1-9][0-9]{6,14}$",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "TransferConfig",
+      "type": "object"
+    },
+    "Transition": {
+      "additionalProperties": false,
+      "properties": {
+        "to": {
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "title": "To",
+          "type": "string"
+        },
+        "when": {
+          "description": "Natural-language condition the runtime checks.",
+          "minLength": 1,
+          "title": "When",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to",
+        "when"
+      ],
+      "title": "Transition",
+      "type": "object"
+    },
+    "VoiceConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "default": "cascaded",
+          "description": "ADR-0003.",
+          "enum": [
+            "cascaded",
+            "realtime"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "llm": {
+          "$ref": "#/$defs/LLMRef"
+        },
+        "overrides": {
+          "description": "Per-locale provider overrides (ADR-0014).",
+          "patternProperties": {
+            "^[a-z]{2,3}(-[A-Z]{2})?$": {
+              "$ref": "#/$defs/VoiceOverride"
+            }
+          },
+          "title": "Overrides",
+          "type": "object"
+        },
+        "stt": {
+          "$ref": "#/$defs/ProviderRef"
+        },
+        "tts": {
+          "$ref": "#/$defs/ProviderRef"
+        }
+      },
+      "required": [
+        "stt",
+        "llm",
+        "tts"
+      ],
+      "title": "VoiceConfig",
+      "type": "object"
+    },
+    "VoiceOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "llm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LLMRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "stt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "VoiceOverride",
+      "type": "object"
+    }
+  },
+  "$id": "https://ringbridge.dev/schema/agent-v1alpha1.json",
+  "additionalProperties": false,
+  "description": "A Ringbridge agent definition (`apiVersion: ringbridge.dev/v1alpha1`, `kind: Agent`).",
+  "properties": {
+    "apiVersion": {
+      "const": "ringbridge.dev/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Agent",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/AgentBody"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "Ringbridge AgentSpec v1alpha1",
+  "type": "object"
+}
