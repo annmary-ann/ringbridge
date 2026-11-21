@@ -63,6 +63,8 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "N", "S", "PT", "RET", "A
 
 [tool.ruff.lint.per-file-ignores]
 "packages/*/tests/**" = ["S101"]
+# Spikes are throwaway experiments run in containers: temp files, own subprocesses, asserts.
+"spikes/**" = ["S101", "S108", "S603", "ARG001"]
 
 # ---------- mypy ----------
 [tool.mypy]
