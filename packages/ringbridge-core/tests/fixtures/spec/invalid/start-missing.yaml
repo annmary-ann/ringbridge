@@ -1,0 +1,23 @@
+# expect: spec.graph.start: start node 'welcome' is not defined
+apiVersion: ringbridge.dev/v1alpha1
+kind: Agent
+metadata:
+  name: minimal
+spec:
+  language:
+    default: en-US
+  voice:
+    stt: { provider: deepgram }
+    llm: { provider: openai, model: gpt-4.1-mini }
+    tts: { provider: cartesia }
+  persona: You are a helpful receptionist.
+  disclosures:
+    greeting: Hi, I'm an AI assistant and this call is recorded.
+  business:
+    timezone: America/New_York
+  graph:
+    start: welcome  # <- here
+    nodes:
+      greet:
+        goal: Help the caller.
+        tools: [call.end]
