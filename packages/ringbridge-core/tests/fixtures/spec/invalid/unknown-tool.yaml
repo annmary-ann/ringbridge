@@ -1,0 +1,23 @@
+# expect: spec.graph.nodes.greet.tools[0]: unknown tool 'call.hangup'
+apiVersion: ringbridge.dev/v1alpha1
+kind: Agent
+metadata:
+  name: minimal
+spec:
+  language:
+    default: en-US
+  voice:
+    stt: { provider: deepgram }
+    llm: { provider: openai, model: gpt-4.1-mini }
+    tts: { provider: cartesia }
+  persona: You are a helpful receptionist.
+  disclosures:
+    greeting: Hi, I'm an AI assistant and this call is recorded.
+  business:
+    timezone: America/New_York
+  graph:
+    start: greet
+    nodes:
+      greet:
+        goal: Help the caller.
+        tools: [call.hangup]  # <- here

@@ -1,0 +1,22 @@
+# expect: spec.voice.llm: required field is missing
+apiVersion: ringbridge.dev/v1alpha1
+kind: Agent
+metadata:
+  name: minimal
+spec:
+  language:
+    default: en-US
+  voice:  # <- here
+    stt: { provider: deepgram }
+    tts: { provider: cartesia }
+  persona: You are a helpful receptionist.
+  disclosures:
+    greeting: Hi, I'm an AI assistant and this call is recorded.
+  business:
+    timezone: America/New_York
+  graph:
+    start: greet
+    nodes:
+      greet:
+        goal: Help the caller.
+        tools: [call.end]
