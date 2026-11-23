@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28",
     "mypy>=1.13",
     "poethepoet>=0.31",
     "pre-commit>=4.0",
@@ -45,6 +46,9 @@ typecheck = { cmd = "python -m mypy", help = "Strict type check" }
 typecheck-docker = { cmd = "docker run --rm -v ${POE_ROOT}:/src -w /src -e UV_PROJECT_ENVIRONMENT=/tmp/venv ghcr.io/astral-sh/uv:0.10.12-python3.12-trixie-slim uv run --locked python -m mypy", help = "mypy inside Linux, for machines where it can't run natively" }
 test = { cmd = "python -m pytest", help = "Run all package tests with coverage" }
 check = { sequence = ["lint", "typecheck", "test"], help = "Everything CI runs" }
+serve = { cmd = "python -m ringbridge_server serve", help = "Run the control plane API on :8088" }
+migrate = { cmd = "python -m ringbridge_server migrate", help = "Apply database migrations" }
+revision = { cmd = "python -m ringbridge_server revision -m", help = "Autogenerate a migration: poe revision 'add x'" }
 hooks = { cmd = "pre-commit install", help = "Install git hooks" }
 up = { cmd = "docker compose up -d --wait", help = "Start the dev stack (LiveKit, Redis, Postgres, S3, Jaeger)" }
 up-sip = { cmd = "docker compose --profile sip up -d --wait", help = "Start the dev stack with the LiveKit SIP bridge" }
@@ -75,6 +79,10 @@ strict = true
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = ["asyncpg", "asyncpg.*"]  # ships no type information
+ignore_missing_imports = true
+
 # ---------- pytest ----------
 [tool.pytest.ini_options]
 testpaths = ["packages"]
@@ -91,6 +99,10 @@ addopts = [
     "--cov-report=term-missing",
 ]
 markers = ["integration: needs the Docker Compose stack"]
+
+[tool.coverage.run]
+# SQLAlchemy runs async database calls inside greenlets; without this, code after them looks unrun.
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 skip_covered = true

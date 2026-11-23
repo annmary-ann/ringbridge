@@ -42,6 +42,21 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.12", "3.13"]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ringbridge
+          POSTGRES_PASSWORD: ringbridge
+          POSTGRES_DB: ringbridge
+        ports: ["5435:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ringbridge" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      # Integration tests fail instead of skipping when Postgres is missing.
+      RINGBRIDGE_REQUIRE_DB: "1"
+      RINGBRIDGE_TEST_DATABASE_URL: postgresql://ringbridge:ringbridge@localhost:5435/ringbridge
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
