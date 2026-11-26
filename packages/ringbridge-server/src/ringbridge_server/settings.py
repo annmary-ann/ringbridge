@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = Field(default=8088, ge=1, le=65535)
     max_spec_bytes: int = Field(default=1_000_000, ge=1)
+    # Shared secret agent workers send as `Authorization: Bearer ...` on /internal routes.
+    # Unset disables the internal API. Short-lived per-worker tokens replace it later.
+    worker_token: SecretStr | None = None
 
     @property
     def async_database_url(self) -> str:

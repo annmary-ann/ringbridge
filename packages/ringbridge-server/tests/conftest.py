@@ -15,6 +15,7 @@ from pathlib import Path
 import asyncpg
 import httpx
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -24,6 +25,7 @@ from ringbridge_server.app import create_app
 from ringbridge_server.settings import Settings
 
 TEST_DB = "ringbridge_test"
+WORKER_TOKEN = "test-worker-token"  # noqa: S105 - test-only value
 DEFAULT_ADMIN_URL = "postgresql://ringbridge:ringbridge@localhost:5435/ringbridge"
 REPO = Path(__file__).resolve().parents[3]
 EXAMPLE_SPEC = REPO / "examples" / "dental-clinic" / "agent.yaml"
@@ -62,7 +64,7 @@ def anyio_backend() -> str:
 
 @pytest.fixture
 def settings(database_url: str) -> Settings:
-    return Settings(database_url=database_url, log_json=False)
+    return Settings(database_url=database_url, log_json=False, worker_token=SecretStr(WORKER_TOKEN))
 
 
 async def _truncate(engine: AsyncEngine) -> None:

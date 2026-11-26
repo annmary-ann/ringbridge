@@ -24,6 +24,7 @@ Settings come from `RINGBRIDGE_*` environment variables or `.env`:
 | `RINGBRIDGE_LOG_JSON` | `true` | One JSON object per line; `false` for plain text |
 | `RINGBRIDGE_DB_POOL_SIZE` / `RINGBRIDGE_DB_MAX_OVERFLOW` | `5` / `10` | |
 | `RINGBRIDGE_MAX_SPEC_BYTES` | `1000000` | Largest spec a publish accepts |
+| `RINGBRIDGE_WORKER_TOKEN` | unset | Shared secret for agent workers on `/internal` routes; unset disables them |
 
 ## Health
 
@@ -65,6 +66,51 @@ collide or skip.
 Other endpoints: `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/versions`,
 `GET /v1/agents/{id}/versions/{n}`.
 
+## Calls and events
+
+Agent workers report what happens on a call as **events**. The control plane stores them in
+order, exactly once, and builds the transcript from them.
+
+**Worker API** (`/internal/calls`, needs `Authorization: Bearer $RINGBRIDGE_WORKER_TOKEN`;
+without that setting the internal API answers 503):
+
+| Endpoint | |
+|---|---|
+| `POST /internal/calls` | Register a call for a LiveKit room: `{"direction", "livekit_room", ...}`. Repeating it for the same room returns the same call (200 instead of 201) |
+| `POST /internal/calls/{id}/events` | A batch of up to 500 events: `{"events": [...]}`. Returns `{"accepted", "duplicates", "status"}` |
+
+Every event has `event_id` (chosen by the worker, unique within the call), `seq` (its order on
+the call), `occurred_at` (with a time zone) and a `type`:
+
+| Type | Fields |
+|---|---|
+| `call.started` | `from_number`, `to_number`. The call becomes `in_progress` |
+| `turn` | `speaker` (`caller` or `agent`), `text`, `language`, `node`, `interrupted`, `started_at` |
+| `tool_call` | `tool_call_id`, `name`, `arguments` |
+| `tool_result` | `tool_call_id`, `name`, `ok`, `result`, `error`, `duration_ms` |
+| `transition` | `from_node`, `to_node`, `reason` |
+| `metric` | `name` (e.g. `voice_to_voice_ms`), `value`, `unit`, `turn_seq` |
+| `call.ended` | `status` (`completed`, `no_answer`, `busy`, `failed`, `canceled`), `reason` |
+
+The models live in `ringbridge_core.events`, so workers and the server share one definition.
+
+Retrying is always safe. Events already stored are skipped by `event_id` and listed under
+`duplicates`, even when several retries race. `call.started` and `call.ended` change the call
+only the first time, so a replayed batch never reopens a finished call. Batches may arrive out
+of order; `seq` decides the order when reading.
+
+**Reading** (`/v1/calls`):
+
+- `GET /v1/calls`: newest first, `?status=` to filter.
+- `GET /v1/calls/{id}` and `GET /v1/calls/{id}/events` (`?type=turn&type=tool_call` to filter).
+- `GET /v1/calls/{id}/transcript`: speaker, text and milliseconds since the call started for
+  each turn, plus `complete` once the call has ended. `?format=text` gives plain text:
+
+```
+[00:01] Agent: Hello, Smile Dental. This call is answered by an AI assistant.
+[00:05] Caller: I'd like a cleaning tomorrow morning.
+```
+
 ## Data model
 
 | Table | Notes |
@@ -74,7 +120,7 @@ Other endpoints: `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/v
 | `agent_versions` | Immutable: a trigger rejects every `UPDATE` |
 | `sip_trunks` | `direction` is `inbound`, `outbound` or `both` |
 | `phone_numbers` | E.164 only, globally unique. Routes to an agent, optionally pinned to one version |
-| `calls` | `direction` (`inbound`, `outbound`, `web`) and `status` checked by constraints |
+| `calls` | `direction` (`inbound`, `outbound`, `web`) and `status` checked by constraints; one call per LiveKit room |
 | `call_events` | Append-only (`UPDATE` rejected); unique `(call_id, event_id)` makes ingestion idempotent |
 
 Every tenant table has `project_id`. Row-level security on it arrives with #46; until then all
