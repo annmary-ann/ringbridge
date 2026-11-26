@@ -74,6 +74,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: The local-models profile is valid (its images are too large to start in CI)
+        run: docker compose --profile local config --quiet
       - name: Start the stack with the SIP profile
         run: docker compose --profile sip up -d --wait --wait-timeout 180
       - name: Smoke test every service
