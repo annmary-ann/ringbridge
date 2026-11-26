@@ -14,24 +14,27 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from ringbridge_server import __version__
-from ringbridge_server.api import agents, calls
+from ringbridge_server.api import agents, calls, internal_auth, telephony
 from ringbridge_server.db import make_engine, make_sessionmaker
 from ringbridge_server.migrate import head_revision
 from ringbridge_server.settings import Settings, get_settings
+from ringbridge_server.telephony import LiveKitSip, SipControl
 
 log = logging.getLogger("ringbridge.server")
 
 READY_TIMEOUT_S = 2.0
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, sip: SipControl | None = None) -> FastAPI:
     settings = settings or get_settings()
     engine = make_engine(settings)
+    sip = sip or LiveKitSip(settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         log.info("server starting", extra={"version": __version__})
         yield
+        await sip.aclose()
         await engine.dispose()
 
     app = FastAPI(
@@ -44,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.engine = engine
     app.state.sessionmaker = make_sessionmaker(engine)
+    app.state.sip = sip
     app.state.schema_head = head_revision()
 
     app.middleware("http")(_request_context)
@@ -51,6 +55,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(agents.router)
     app.include_router(calls.public)
     app.include_router(calls.internal)
+    app.include_router(telephony.trunks)
+    app.include_router(telephony.numbers)
+    app.include_router(internal_auth.router)
 
     @app.get("/healthz", tags=["ops"], summary="Liveness: the process is up")
     async def healthz() -> dict[str, str]:

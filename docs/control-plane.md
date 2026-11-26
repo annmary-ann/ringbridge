@@ -24,7 +24,10 @@ Settings come from `RINGBRIDGE_*` environment variables or `.env`:
 | `RINGBRIDGE_LOG_JSON` | `true` | One JSON object per line; `false` for plain text |
 | `RINGBRIDGE_DB_POOL_SIZE` / `RINGBRIDGE_DB_MAX_OVERFLOW` | `5` / `10` | |
 | `RINGBRIDGE_MAX_SPEC_BYTES` | `1000000` | Largest spec a publish accepts |
-| `RINGBRIDGE_WORKER_TOKEN` | unset | Shared secret for agent workers on `/internal` routes; unset disables them |
+| `RINGBRIDGE_WORKER_TOKEN` | unset | Shared secret agent workers exchange for short-lived tokens; unset disables `/internal` |
+| `RINGBRIDGE_WORKER_TOKEN_TTL_S` | `900` | Lifetime of a worker token |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | the dev stack's | Also accepted with a `RINGBRIDGE_` prefix |
+| `RINGBRIDGE_AGENT_NAME` | `ringbridge` | LiveKit Agents worker name that dispatch rules send calls to |
 
 ## Health
 
@@ -71,8 +74,7 @@ Other endpoints: `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/v
 Agent workers report what happens on a call as **events**. The control plane stores them in
 order, exactly once, and builds the transcript from them.
 
-**Worker API** (`/internal/calls`, needs `Authorization: Bearer $RINGBRIDGE_WORKER_TOKEN`;
-without that setting the internal API answers 503):
+**Worker API** (`/internal/calls`, needs a worker token, see [Worker authentication](#worker-authentication)):
 
 | Endpoint | |
 |---|---|
@@ -111,6 +113,58 @@ of order; `seq` decides the order when reading.
 [00:05] Caller: I'd like a cleaning tomorrow morning.
 ```
 
+## Phone numbers and inbound routing
+
+Numbers belong to a SIP trunk you bring ([ADR-0008](adr/0008-telephony-byo-sip-trunk.md)); for
+development, a free softphone against the local SIP bridge is enough
+([ADR-0016](adr/0016-pluggable-providers-zero-cost-dev.md)).
+
+```sh
+# a trunk that accepts calls from your provider's addresses
+curl -X POST localhost:8088/v1/sip-trunks -H 'content-type: application/json'   -d '{"name": "main", "direction": "inbound", "allowed_addresses": ["203.0.113.0/24"]}'
+
+# a number on it, answered by an agent (latest version unless pinned)
+curl -X POST localhost:8088/v1/phone-numbers -H 'content-type: application/json'   -d '{"e164": "+914842000123", "sip_trunk_id": "'$TRUNK_ID'", "agent_id": "'$AGENT_ID'"}'
+```
+
+**LiveKit sync.** Each inbound trunk becomes one LiveKit inbound trunk (its numbers, allowed
+addresses and optional digest auth) and one dispatch rule that puts every call in its own
+`call-*` room and dispatches the `ringbridge` agent worker into it. Creating, renaming or deleting
+trunks and adding, moving or removing numbers updates LiveKit straight away.
+
+- A LiveKit failure never loses your change: the trunk shows `sync_status: error` with the reason,
+  and `POST /v1/sip-trunks/{id}/sync` retries. Objects deleted in LiveKit by hand are recreated.
+- `auth_password` is passed to LiveKit and never stored or returned.
+- A trunk with neither `allowed_addresses` nor auth answers anyone who can reach the SIP port;
+  responses carry a warning until you set one.
+- Outbound trunks are stored now and wired up with outbound calling.
+
+**Routing.** When a call arrives, the worker asks
+`POST /internal/calls/inbound {"livekit_room", "to_number", "from_number"}` and gets back:
+
+| `action` | When | The worker |
+|---|---|---|
+| `answer` | The number is bound to an agent with a published version | Runs `agent.spec` (the pinned version, or the latest) |
+| `reject` | `reason` is `unknown_number`, `number_not_bound` or `no_published_version` | Hangs up without speaking. The call is recorded as `failed` with that reason |
+
+The decision is stored on the call, so asking again for the same room returns the same answer.
+Rebinding or pinning a number (`PATCH /v1/phone-numbers/{id}` with `agent_id` or
+`pinned_version`) applies to the next call; nothing restarts. Each number's current route is shown
+in `GET /v1/phone-numbers`. `caller.contact` is always `null` until contacts arrive (#35).
+
+## Worker authentication
+
+Agent workers hold the shared `RINGBRIDGE_WORKER_TOKEN` and exchange it for a short-lived token:
+
+```sh
+curl -X POST localhost:8088/internal/auth/token -H "authorization: Bearer $RINGBRIDGE_WORKER_TOKEN"
+# {"token": "eyJ...", "token_type": "Bearer", "expires_at": 1764151200}
+```
+
+Every other `/internal` route accepts only that token (HS256, signed with a key derived from the
+secret, 15 minutes by default), never the shared secret itself. Without the setting, `/internal`
+answers 503.
+
 ## Data model
 
 | Table | Notes |
@@ -118,7 +172,7 @@ of order; `seq` decides the order when reading.
 | `projects` | Tenant boundary. One `default` project exists until multi-tenancy (#46) |
 | `agents` | Unique `(project_id, name)`; name is a lowercase slug |
 | `agent_versions` | Immutable: a trigger rejects every `UPDATE` |
-| `sip_trunks` | `direction` is `inbound`, `outbound` or `both` |
+| `sip_trunks` | `direction` is `inbound`, `outbound` or `both`; LiveKit trunk and dispatch rule ids and `sync_status` |
 | `phone_numbers` | E.164 only, globally unique. Routes to an agent, optionally pinned to one version |
 | `calls` | `direction` (`inbound`, `outbound`, `web`) and `status` checked by constraints; one call per LiveKit room |
 | `call_events` | Append-only (`UPDATE` rejected); unique `(call_id, event_id)` makes ingestion idempotent |

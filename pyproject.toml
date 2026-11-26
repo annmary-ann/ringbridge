@@ -68,7 +68,7 @@ src = ["packages/*/src", "packages/*/tests"]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "N", "S", "PT", "RET", "ARG"]
 
 [tool.ruff.lint.per-file-ignores]
-"packages/*/tests/**" = ["S101"]
+"packages/*/tests/**" = ["S101", "S105", "S106"]  # asserts and test-only credentials
 # Spikes are throwaway experiments run in containers: temp files, own subprocesses, asserts.
 "spikes/**" = ["S101", "S108", "S603", "ARG001"]
 
@@ -98,7 +98,10 @@ addopts = [
     "--cov=ringbridge_cli",
     "--cov-report=term-missing",
 ]
-markers = ["integration: needs the Docker Compose stack"]
+markers = [
+    "integration: needs Postgres from the Docker Compose stack",
+    "livekit: needs LiveKit from the Docker Compose stack",
+]
 
 [tool.coverage.run]
 # SQLAlchemy runs async database calls inside greenlets; without this, code after them looks unrun.

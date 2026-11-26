@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import hmac
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from sqlalchemy import select, text
@@ -24,8 +23,11 @@ from ringbridge_core.events import (
     payload_of,
     render_transcript,
 )
-from ringbridge_server.api.deps import ProjectDep, SessionDep, SettingsDep
+from ringbridge_server import routing
+from ringbridge_server.api.deps import ProjectDep, SessionDep
+from ringbridge_server.api.internal_auth import require_worker
 from ringbridge_server.models import (
+    DEFAULT_PROJECT_ID,
     Agent,
     AgentVersion,
     Call,
@@ -94,25 +96,44 @@ class Transcript(BaseModel):
     lines: list[TranscriptLine]
 
 
-# ------------------------------------------------------------------ worker auth
+class InboundCall(BaseModel):
+    """What the worker knows when LiveKit dispatches it into a new SIP call's room."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    livekit_room: str = Field(min_length=1, max_length=128, description="Idempotency key")
+    to_number: str = Field(min_length=3, max_length=32, description="The dialled number")
+    from_number: str | None = Field(default=None, max_length=32, description="Caller ID")
+    trace_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
 
 
-def require_worker(
-    settings: SettingsDep,
-    authorization: Annotated[str | None, Header()] = None,
-) -> None:
-    if settings.worker_token is None:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "the internal API is disabled: set RINGBRIDGE_WORKER_TOKEN",
-        )
-    expected = f"Bearer {settings.worker_token.get_secret_value()}"
-    if authorization is None or not hmac.compare_digest(authorization, expected):
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "missing or wrong worker token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+class RoutedAgent(BaseModel):
+    id: uuid.UUID
+    name: str
+    version_id: uuid.UUID
+    version: int
+    spec: dict[str, Any] = Field(description="The published spec the worker must run")
+
+
+class Caller(BaseModel):
+    number: str | None
+    contact: dict[str, Any] | None = Field(
+        default=None, description="Matching contact, once contacts exist (#35); null for now"
+    )
+
+
+class InboundRoute(BaseModel):
+    call: CallOut
+    action: Literal["answer", "reject"]
+    reason: str | None = Field(
+        description="Why the call is rejected: unknown_number, number_not_bound or "
+        "no_published_version. The worker hangs up without speaking."
+    )
+    agent: RoutedAgent | None
+    caller: Caller
+
+
+# ------------------------------------------------------------------ routers
 
 
 internal = APIRouter(
@@ -178,6 +199,84 @@ async def create_call(
     if call is None or call.project_id != project_id:  # pragma: no cover - other tenant's room
         raise HTTPException(status.HTTP_409_CONFLICT, "room belongs to another call")
     return CallOut.model_validate(call)
+
+
+@internal.post("/inbound", responses={200: {"model": InboundRoute}})
+async def route_inbound(body: InboundCall, response: Response, session: SessionDep) -> InboundRoute:
+    """Decide which agent version answers an inbound call, and register the call.
+
+    The worker calls this once per room. The decision is stored on the call, so asking again
+    for the same room returns the same answer even if the number was rebound in between.
+    Rebinding a number affects the next call, with no restart anywhere.
+    """
+    existing = await session.scalar(select(Call).where(Call.livekit_room == body.livekit_room))
+    if existing is not None:
+        response.status_code = status.HTTP_200_OK
+        return await _decision(session, existing)
+
+    number = await routing.find_number(session, body.to_number)
+    route = await routing.resolve(session, number)
+    values: dict[str, Any] = {
+        "project_id": number.project_id if number else DEFAULT_PROJECT_ID,
+        "direction": "inbound",
+        "status": "ringing",
+        "livekit_room": body.livekit_room,
+        "phone_number_id": number.id if number else None,
+        "agent_version_id": route.version.id if route.version else None,
+        "from_number": body.from_number,
+        "to_number": routing.normalize_number(body.to_number),
+        "trace_id": body.trace_id,
+    }
+    if route.reject is not None:
+        # Unrouted calls are recorded as failed, so they show up in call history.
+        now = datetime.now(UTC)
+        values |= {"status": "failed", "end_reason": route.reject, "started_at": now}
+        values["ended_at"] = now
+    created = await session.scalar(
+        insert(Call)
+        .values(values)
+        .on_conflict_do_nothing(
+            index_elements=["livekit_room"], index_where=text("livekit_room IS NOT NULL")
+        )
+        .returning(Call.id)
+    )
+    # None means a concurrent request for the same room got there first: return its decision.
+    response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    stored = await session.scalar(select(Call).where(Call.livekit_room == body.livekit_room))
+    if stored is None:  # pragma: no cover - the row was just inserted or already existed
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "call vanished")
+    return await _decision(session, stored)
+
+
+async def _decision(session: SessionDep, call: Call) -> InboundRoute:
+    caller = Caller(number=call.from_number)
+    version = (
+        await session.get(AgentVersion, call.agent_version_id) if call.agent_version_id else None
+    )
+    if version is None:
+        return InboundRoute(
+            call=CallOut.model_validate(call),
+            action="reject",
+            reason=call.end_reason or "no_published_version",
+            agent=None,
+            caller=caller,
+        )
+    agent = await session.get(Agent, version.agent_id)
+    if agent is None:  # pragma: no cover - agent_versions.agent_id is a RESTRICT foreign key
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "agent missing")
+    return InboundRoute(
+        call=CallOut.model_validate(call),
+        action="answer",
+        reason=None,
+        agent=RoutedAgent(
+            id=agent.id,
+            name=agent.name,
+            version_id=version.id,
+            version=version.version,
+            spec=version.spec,
+        ),
+        caller=caller,
+    )
 
 
 @internal.post("/{call_id}/events", responses={404: {"description": "Call not found"}})
