@@ -42,8 +42,8 @@ Ringbridge is the **business layer** on top of an open real-time voice stack. Ho
                                                        ▼
                                         ┌───────────────────────────────┐
      STT / LLM / TTS providers ◄───────►│ Agent workers (Python)        │
-     Deepgram, OpenAI, Anthropic,       │ ringbridge-agent              │
-     Cartesia, ElevenLabs, Sarvam ...   │ AgentSpec → graph runtime     │
+     plug-ins: local (Ollama, Whisper,  │ ringbridge-agent              │
+     Piper) or hosted (any, ADR-0016)   │ AgentSpec → graph runtime     │
                                         └──────┬───────────────┬────────┘
                                    tools (HTTP)│               │ call events
                                                ▼               ▼
@@ -81,7 +81,7 @@ Why LiveKit: [ADR-0002](adr/0002-livekit-agents-runtime.md).
 A Python worker built on LiveKit Agents. Per call it:
 
 1. Loads the **published AgentSpec version** bound to the dialled number or the campaign.
-2. Builds the voice pipeline from the spec's provider config: VAD → STT → turn detection → LLM → TTS, with interruption (barge-in) handling.
+2. Builds the voice pipeline from the spec's provider config: VAD → STT → turn detection → LLM → TTS, with interruption (barge-in) handling. Providers are plug-ins found through entry points; local, free providers are the development default ([ADR-0016](adr/0016-pluggable-providers-zero-cost-dev.md)).
 3. Runs the **conversation graph** (§4). Each node maps to a LiveKit `Agent` with its own instructions and tools, and transitions are agent handoffs.
 4. Calls **tools**: built-ins backed by connectors (check availability, book, look up contact, transfer, send message, end call), HTTP webhook tools, and MCP servers.
 5. Streams **call events** to the control plane: turn segments, tool calls, node transitions, latency metrics. Events are batched and idempotent (event id per turn).
