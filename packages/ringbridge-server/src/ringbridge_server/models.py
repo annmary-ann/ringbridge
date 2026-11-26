@@ -189,6 +189,13 @@ class Call(Base):
         CheckConstraint(_in("direction", CALL_DIRECTIONS), name="direction"),
         CheckConstraint(_in("status", CALL_STATUSES), name="status"),
         Index("ix_calls_project_id_created_at", "project_id", text("created_at DESC")),
+        # One call per LiveKit room: makes call creation by workers idempotent.
+        Index(
+            "uq_calls_livekit_room",
+            "livekit_room",
+            unique=True,
+            postgresql_where=text("livekit_room IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
