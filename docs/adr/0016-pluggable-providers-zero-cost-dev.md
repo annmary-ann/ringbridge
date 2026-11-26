@@ -22,7 +22,8 @@ a factory:
 ```python
 class ProviderFactory(Protocol):
     kind: Literal["stt", "llm", "tts"]
-    id: str                                # what `provider:` names in an AgentSpec
+    id: str  # what `provider:` names in an AgentSpec
+
     def options_schema(self) -> dict: ...  # JSON Schema for `options`, checked at publish time
     def create(self, ref: ProviderRef, secrets: SecretSource) -> STT | LLM | TTS: ...
 ```
