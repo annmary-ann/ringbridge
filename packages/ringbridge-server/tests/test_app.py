@@ -15,6 +15,7 @@ from ringbridge_server import __main__ as cli
 from ringbridge_server import migrate, settings
 from ringbridge_server.app import create_app
 from ringbridge_server.logs import JsonFormatter, configure_logging
+from ringbridge_server.migrate import head_revision
 from ringbridge_server.settings import Settings, to_async_url
 
 UNREACHABLE = "postgresql://nobody:nothing@127.0.0.1:1/none"
@@ -107,7 +108,7 @@ async def test_readyz_is_503_when_the_database_is_down() -> None:
 @pytest.mark.anyio
 @pytest.mark.integration
 async def test_readyz_checks_the_schema_revision(client: httpx.AsyncClient) -> None:
-    assert (await client.get("/readyz")).json() == {"status": "ready", "schema": "0001"}
+    assert (await client.get("/readyz")).json() == {"status": "ready", "schema": head_revision()}
     app: Any = client._transport.app  # type: ignore[attr-defined]
     app.state.schema_head = "9999"
     r = await client.get("/readyz")
@@ -187,3 +188,11 @@ def test_cli_serve(calls: list[tuple[Any, ...]], monkeypatch: pytest.MonkeyPatch
 def test_cli_requires_a_command() -> None:
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+@pytest.mark.anyio
+async def test_internal_api_is_disabled_without_a_worker_token() -> None:
+    async with _offline_client() as client:
+        r = await client.post("/internal/calls", json={"direction": "web", "livekit_room": "r"})
+    assert r.status_code == 503
+    assert "RINGBRIDGE_WORKER_TOKEN" in r.json()["detail"]

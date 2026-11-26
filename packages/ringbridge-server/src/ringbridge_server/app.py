@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from ringbridge_server import __version__
-from ringbridge_server.api import agents
+from ringbridge_server.api import agents, calls
 from ringbridge_server.db import make_engine, make_sessionmaker
 from ringbridge_server.migrate import head_revision
 from ringbridge_server.settings import Settings, get_settings
@@ -49,6 +49,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.middleware("http")(_request_context)
     app.add_exception_handler(agents.SpecRejectedError, agents.spec_rejected_handler)
     app.include_router(agents.router)
+    app.include_router(calls.public)
+    app.include_router(calls.internal)
 
     @app.get("/healthz", tags=["ops"], summary="Liveness: the process is up")
     async def healthz() -> dict[str, str]:
