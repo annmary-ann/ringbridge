@@ -52,8 +52,11 @@ revision = { cmd = "python -m ringbridge_server revision -m", help = "Autogenera
 hooks = { cmd = "pre-commit install", help = "Install git hooks" }
 up = { cmd = "docker compose up -d --wait", help = "Start the dev stack (LiveKit, Redis, Postgres, S3, Jaeger)" }
 up-sip = { cmd = "docker compose --profile sip up -d --wait", help = "Start the dev stack with the LiveKit SIP bridge" }
-down = { cmd = "docker compose --profile sip down", help = "Stop the dev stack (data is kept)" }
-reset = { cmd = "docker compose --profile sip down -v", help = "Stop the dev stack and delete its data" }
+up-local = { cmd = "docker compose --profile local up -d --wait", help = "Start the dev stack with free local models (Ollama, Speaches)" }
+models = { cmd = "bash scripts/local-models.sh", help = "Download the default local models (a few GB, once)" }
+smoke-local = { cmd = "bash scripts/smoke-local.sh", help = "Check the local models: TTS -> STT round trip and an LLM reply" }
+down = { cmd = "docker compose --profile sip --profile local down", help = "Stop the dev stack (data is kept)" }
+reset = { cmd = "docker compose --profile sip --profile local down -v", help = "Stop the dev stack and delete its data" }
 logs = { cmd = "docker compose logs -f --tail 100", help = "Follow dev stack logs" }
 smoke = { cmd = "bash scripts/smoke-stack.sh", help = "Check every dev stack service works" }
 schema = { cmd = "python -m ringbridge_core.spec docs/schema/agent-v1alpha1.json", help = "Regenerate the AgentSpec JSON Schema from the models" }

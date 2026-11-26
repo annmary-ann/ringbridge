@@ -2,6 +2,8 @@
 #
 #   uv run poe up        # core stack: LiveKit, Redis, Postgres, S3 (SeaweedFS), Jaeger
 #   uv run poe up-sip    # core stack + LiveKit SIP (needs reachable SIP/RTP ports for real calls)
+#   uv run poe up-local  # core stack + free local models: Ollama (LLM) and Speaches (STT + TTS)
+#   uv run poe models    # download the default local models (once; a few GB)
 #
 # Host ports avoid other local stacks (5432, 5433, 5434, 16686-16687, 4317-4320) and can be
 # overridden in .env. Every credential here is a development-only value.
@@ -92,6 +94,39 @@ services:
       - "${RINGBRIDGE_OTLP_GRPC_PORT:-4321}:4317"   # OTLP gRPC
       - "${RINGBRIDGE_OTLP_HTTP_PORT:-4322}:4318"   # OTLP HTTP
 
+  # ---------- free local models (profile "local", ADR-0016) ----------
+  ollama:
+    # LLM. Already run Ollama on this machine? Skip this service and set RINGBRIDGE_OLLAMA_URL.
+    image: ollama/ollama:0.13.5
+    profiles: ["local"]
+    ports:
+      - "${RINGBRIDGE_OLLAMA_PORT:-11436}:11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m # keep the model loaded between calls
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  speech:
+    # Speech-to-text (faster-whisper) and text-to-speech (Piper, Kokoro) behind the OpenAI audio API.
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    profiles: ["local"]
+    ports:
+      - "${RINGBRIDGE_SPEECH_PORT:-8089}:8000"
+    volumes:
+      - speech-models:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8000/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
 volumes:
   postgres-data:
   s3-data:
+  ollama-models:
+  speech-models:
