@@ -17,5 +17,6 @@
 | [0013](0013-compliance-as-features.md) | Compliance mechanisms are product features | Accepted |
 | [0014](0014-multilingual-first-class.md) | Multilingual from the start | Accepted |
 | [0015](0015-object-storage-seaweedfs.md) | S3-compatible object storage; SeaweedFS in the dev stack | Accepted |
+| [0016](0016-pluggable-providers-zero-cost-dev.md) | Pluggable speech and LLM providers; zero-cost development | Accepted |
 
 New ADR: copy [`0000-template.md`](0000-template.md), take the next number, open a PR.
