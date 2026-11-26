@@ -195,7 +195,7 @@ async def test_binding_pinning_and_rebinding(client: httpx.AsyncClient, spec_tex
 async def test_binding_is_validated(client: httpx.AsyncClient, spec_text: str) -> None:
     trunk = await _trunk(client)
     agent_id = await _agent_with_versions(client, spec_text, 1)
-    base = {"e164": NUMBER, "sip_trunk_id": trunk["id"]}
+    base: dict[str, Any] = {"e164": NUMBER, "sip_trunk_id": trunk["id"]}
     cases = [
         ({"agent_id": str(uuid.uuid4())}, "unknown agent_id"),
         ({"agent_id": agent_id, "pinned_version": 9}, "has no version 9"),

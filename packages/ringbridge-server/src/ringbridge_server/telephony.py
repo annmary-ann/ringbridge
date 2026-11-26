@@ -40,12 +40,6 @@ class SipControl(Protocol):
         """Create or update the LiveKit inbound trunk; returns its id. Idempotent."""
         ...
 
-    async def _rule_exists(self, rule_id: str) -> bool:
-        found = await self._lk().sip.list_dispatch_rule(
-            api.ListSIPDispatchRuleRequest(dispatch_rule_ids=[rule_id])
-        )
-        return bool(found.items)
-
     async def ensure_dispatch(self, trunk: TrunkSpec, livekit_trunk_id: str) -> str:
         """Create or update the dispatch rule for the trunk; returns its id. Idempotent."""
         ...

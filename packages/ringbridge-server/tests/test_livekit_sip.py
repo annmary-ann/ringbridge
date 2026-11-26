@@ -31,7 +31,7 @@ def _reachable(url: str) -> bool:
 
 @pytest.fixture
 async def livekit() -> AsyncIterator[LiveKitSip]:
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
     if not _reachable(settings.livekit_url):
         reason = f"LiveKit is not reachable at {settings.livekit_url}: start it with `poe up`"
         if os.environ.get("RINGBRIDGE_REQUIRE_LIVEKIT") == "1":
