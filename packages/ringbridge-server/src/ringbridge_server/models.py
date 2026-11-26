@@ -26,7 +26,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 DEFAULT_PROJECT_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -36,6 +36,7 @@ SLUG_PATTERN = r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
 E164_PATTERN = r"^\+[1-9][0-9]{6,14}$"
 
 TRUNK_DIRECTIONS = ("inbound", "outbound", "both")
+SYNC_STATUSES = ("pending", "synced", "error", "not_applicable")
 CALL_DIRECTIONS = ("inbound", "outbound", "web")
 CALL_STATUSES = (
     "queued",
@@ -149,6 +150,7 @@ class SipTrunk(Base):
     __table_args__ = (
         UniqueConstraint("project_id", "name"),
         CheckConstraint(_in("direction", TRUNK_DIRECTIONS), name="direction"),
+        CheckConstraint(_in("sync_status", SYNC_STATUSES), name="sync_status"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
@@ -158,6 +160,16 @@ class SipTrunk(Base):
     provider: Mapped[str | None] = mapped_column(String(50))
     sip_address: Mapped[str | None] = mapped_column(String(255))
     livekit_trunk_id: Mapped[str | None] = mapped_column(String(100), unique=True)
+    # Inbound only: who may send calls (IPs or CIDRs) and optional digest auth username.
+    # The password goes straight to LiveKit and is never stored here.
+    allowed_addresses: Mapped[list[str]] = mapped_column(
+        ARRAY(String(64)), server_default=text("'{}'")
+    )
+    auth_username: Mapped[str | None] = mapped_column(String(100))
+    livekit_dispatch_rule_id: Mapped[str | None] = mapped_column(String(100), unique=True)
+    sync_status: Mapped[str] = mapped_column(String(16), server_default="pending")
+    sync_error: Mapped[str | None] = mapped_column(Text)
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created_at()
 
 
