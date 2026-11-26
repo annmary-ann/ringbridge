@@ -196,7 +196,7 @@ async def test_binding_is_validated(client: httpx.AsyncClient, spec_text: str) -
     trunk = await _trunk(client)
     agent_id = await _agent_with_versions(client, spec_text, 1)
     base: dict[str, Any] = {"e164": NUMBER, "sip_trunk_id": trunk["id"]}
-    cases = [
+    cases: list[tuple[dict[str, Any], str]] = [
         ({"agent_id": str(uuid.uuid4())}, "unknown agent_id"),
         ({"agent_id": agent_id, "pinned_version": 9}, "has no version 9"),
         ({"pinned_version": 1}, "needs agent_id"),
