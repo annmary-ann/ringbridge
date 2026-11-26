@@ -23,9 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from ringbridge_server import migrate
 from ringbridge_server.app import create_app
 from ringbridge_server.settings import Settings
+from ringbridge_server.testing import InMemorySip
 
 TEST_DB = "ringbridge_test"
-WORKER_TOKEN = "test-worker-token"  # noqa: S105 - test-only value
+WORKER_TOKEN = "test-worker-token"
 DEFAULT_ADMIN_URL = "postgresql://ringbridge:ringbridge@localhost:5435/ringbridge"
 REPO = Path(__file__).resolve().parents[3]
 EXAMPLE_SPEC = REPO / "examples" / "dental-clinic" / "agent.yaml"
@@ -82,8 +83,13 @@ async def engine(settings: Settings) -> AsyncIterator[AsyncEngine]:
 
 
 @pytest.fixture
-async def client(settings: Settings) -> AsyncIterator[httpx.AsyncClient]:
-    app = create_app(settings)
+def sip() -> InMemorySip:
+    return InMemorySip()
+
+
+@pytest.fixture
+async def client(settings: Settings, sip: InMemorySip) -> AsyncIterator[httpx.AsyncClient]:
+    app = create_app(settings, sip=sip)
     await _truncate(app.state.engine)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:

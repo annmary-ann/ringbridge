@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ringbridge_server.db import session_scope
 from ringbridge_server.models import DEFAULT_PROJECT_ID
 from ringbridge_server.settings import Settings
+from ringbridge_server.telephony import SipControl
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -32,3 +33,11 @@ def get_project_id() -> uuid.UUID:
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 ProjectDep = Annotated[uuid.UUID, Depends(get_project_id)]
+
+
+def get_sip(request: Request) -> SipControl:
+    sip: SipControl = request.app.state.sip
+    return sip
+
+
+SipDep = Annotated[SipControl, Depends(get_sip)]

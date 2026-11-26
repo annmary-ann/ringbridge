@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
@@ -15,7 +15,9 @@ _PLAIN_SCHEMES = ("postgresql://", "postgres://", "postgresql+psycopg://", "post
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="RINGBRIDGE_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="RINGBRIDGE_", env_file=".env", extra="ignore", populate_by_name=True
+    )
 
     # repr=False keeps the password out of logs and tracebacks.
     database_url: str = Field(
@@ -31,6 +33,27 @@ class Settings(BaseSettings):
     # Shared secret agent workers send as `Authorization: Bearer ...` on /internal routes.
     # Unset disables the internal API. Short-lived per-worker tokens replace it later.
     worker_token: SecretStr | None = None
+    worker_token_ttl_s: int = Field(default=900, ge=60, le=86_400)
+
+    # LiveKit: the standard LIVEKIT_* names work too. Defaults match the dev stack.
+    livekit_url: str = Field(
+        default="ws://localhost:7880",
+        validation_alias=AliasChoices("RINGBRIDGE_LIVEKIT_URL", "LIVEKIT_URL", "livekit_url"),
+    )
+    livekit_api_key: str = Field(
+        default="devkey",
+        validation_alias=AliasChoices(
+            "RINGBRIDGE_LIVEKIT_API_KEY", "LIVEKIT_API_KEY", "livekit_api_key"
+        ),
+    )
+    livekit_api_secret: SecretStr = Field(
+        default=SecretStr("devsecret-devsecret-devsecret-devsecret"),
+        validation_alias=AliasChoices(
+            "RINGBRIDGE_LIVEKIT_API_SECRET", "LIVEKIT_API_SECRET", "livekit_api_secret"
+        ),
+    )
+    # The LiveKit Agents worker name that dispatch rules send calls to.
+    agent_name: str = "ringbridge"
 
     @property
     def async_database_url(self) -> str:

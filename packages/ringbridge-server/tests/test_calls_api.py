@@ -10,9 +10,12 @@ from typing import Any
 import httpx
 import pytest
 
+from ringbridge_server import worker_auth
+
 pytestmark = [pytest.mark.anyio, pytest.mark.integration]
 
-AUTH = {"authorization": "Bearer test-worker-token"}  # conftest.WORKER_TOKEN
+# A short-lived token signed with conftest.WORKER_TOKEN, as POST /internal/auth/token issues.
+AUTH = {"authorization": f"Bearer {worker_auth.issue('test-worker-token', 3600).token}"}
 T0 = datetime(2026, 11, 26, 10, 0, tzinfo=UTC)
 
 

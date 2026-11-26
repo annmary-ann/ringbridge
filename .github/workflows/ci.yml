@@ -78,6 +78,14 @@ jobs:
         run: docker compose --profile sip up -d --wait --wait-timeout 180
       - name: Smoke test every service
         run: bash scripts/smoke-stack.sh --sip
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: LiveKit SIP sync against the real server
+        env:
+          RINGBRIDGE_REQUIRE_LIVEKIT: "1"
+        run: uv run pytest -m livekit --no-cov packages/ringbridge-server
       - name: Logs on failure
         if: failure()
         run: docker compose --profile sip logs --tail 200
